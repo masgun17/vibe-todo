@@ -5,7 +5,8 @@ import { listCompletions } from "@/lib/db";
 
 export default async function LogPage() {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  const email = session?.user?.email;
+  if (!email) {
     return (
       <div className="space-y-4">
         <h1 className="text-xl font-semibold">Log</h1>
@@ -17,7 +18,7 @@ export default async function LogPage() {
     );
   }
 
-  const items = await listCompletions({ userEmail: session.user.email! });
+  const items = await listCompletions({ userEmail: email });
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Log</h1>

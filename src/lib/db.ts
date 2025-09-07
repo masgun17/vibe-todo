@@ -79,7 +79,7 @@ export async function updateTodo(params: {
     update todos
     set title = coalesce(${title ?? null}, title),
         recurrence = coalesce(${recurrence ?? null}, recurrence),
-        details = ${details === undefined ? sql`details` : details},
+        details = case when ${details === undefined} then details else ${details ?? null} end,
         archived = coalesce(${archived ?? null}, archived)
     where id = ${id} and user_email = ${userEmail};
   `;

@@ -6,7 +6,8 @@ import { getDatesForRange, isDueOnDate, toYYYYMMDD } from "@/lib/schedule";
 
 export default async function CalendarPage() {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  const email = session?.user?.email;
+  if (!email) {
     return (
       <div className="space-y-4">
         <h1 className="text-xl font-semibold">Calendar</h1>
@@ -18,7 +19,7 @@ export default async function CalendarPage() {
     );
   }
 
-  const userEmail = session.user.email!;
+  const userEmail = email;
   const todos = await getAllTodos({ userEmail });
   const today = new Date();
   const start = new Date(today.getFullYear(), today.getMonth(), 1);
