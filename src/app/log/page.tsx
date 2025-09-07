@@ -19,6 +19,11 @@ export default async function LogPage() {
   }
 
   const items = await listCompletions({ userEmail: email });
+  const formatDate = (d: unknown): string => {
+    if (typeof d === "string") return d;
+    if (d instanceof Date) return d.toISOString().slice(0, 10);
+    return String(d);
+  };
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Log</h1>
@@ -29,7 +34,7 @@ export default async function LogPage() {
         {items.map((c) => (
           <li key={c.id} className="py-3 text-sm">
             <span className="font-medium">{c.title}</span>
-            <span className="text-neutral-500"> · {c.completed_on}</span>
+            <span className="text-neutral-500"> · {formatDate(c.completed_on as unknown)}</span>
           </li>
         ))}
       </ul>
