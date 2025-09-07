@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import Nav from "@/components/Nav";
+import BackButton from "@/components/BackButton";
 import "./globals.css";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -36,6 +37,7 @@ export default async function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <header className="border-b border-black/10 dark:border-white/10">
           <div className="flex items-center">
+            <BackButton />
             <Nav />
             <div className="ml-auto mr-4">
               {!session ? (
