@@ -1,3 +1,4 @@
+import "server-only";
 import { sql } from "@vercel/postgres";
 
 export type Recurrence = "none" | "daily" | "weekly" | "monthly";
@@ -20,33 +21,40 @@ export interface CompletionRecord {
   created_at: string;
 }
 
-export async function ensureSchema(): Promise<void> {
-  // Tables: todos, completions. String IDs to avoid DB extensions.
-  await sql`
-    create table if not exists todos (
-      id text primary key,
-      user_email text not null,
-      title text not null,
-      recurrence text not null check (recurrence in ('none','daily','weekly','monthly')),
-      details text,
-      created_at timestamptz not null default now(),
-      archived boolean not null default false
-    );
-  `;
+let schemaInitialized: Promise<void> | null = null;
+export function ensureSchema(): Promise<void> {
+  if (!schemaInitialized) {
+    schemaInitialized = (async () => {
+      // Tables: todos, completions. String IDs to avoid DB extensions.
+      await sql`
+        create table if not exists todos (
+          id text primary key,
+          user_email text not null,
+          title text not null,
+          recurrence text not null check (recurrence in ('none','daily','weekly','monthly')),
+          details text,
+          created_at timestamptz not null default now(),
+          archived boolean not null default false
+        );
+      `;
 
-  await sql`
-    create table if not exists completions (
-      id text primary key,
-      todo_id text not null references todos(id) on delete cascade,
-      user_email text not null,
-      completed_on date not null,
-      created_at timestamptz not null default now(),
-      unique (todo_id, completed_on)
-    );
-  `;
+      await sql`
+        create table if not exists completions (
+          id text primary key,
+          todo_id text not null references todos(id) on delete cascade,
+          user_email text not null,
+          completed_on date not null,
+          created_at timestamptz not null default now(),
+          unique (todo_id, completed_on)
+        );
+      `;
 
-  await sql`create index if not exists idx_todos_user on todos(user_email);`;
-  await sql`create index if not exists idx_completions_user_date on completions(user_email, completed_on);`;
+      await sql`create index if not exists idx_todos_user on todos(user_email);`;
+      await sql`create index if not exists idx_completions_user_date on completions(user_email, completed_on);`;
+      await sql`create index if not exists idx_completions_todo on completions(todo_id);`;
+    })();
+  }
+  return schemaInitialized;
 }
 
 export async function insertTodo(params: {
@@ -118,6 +126,18 @@ export async function getCompletionsForTodo(params: { id: string; userEmail: str
     select * from completions where todo_id=${id} and user_email=${userEmail} order by completed_on desc
   `;
   return res.rows;
+}
+
+export async function getCompletionsForTodos(params: { todoIds: string[]; userEmail: string }) {
+  await ensureSchema();
+  const { todoIds, userEmail } = params;
+  if (todoIds.length === 0) return [] as CompletionRecord[];
+  // Simpler cross-driver approach: fetch by user and filter in memory
+  const res = await sql<CompletionRecord>`
+    select * from completions where user_email=${userEmail}
+  `;
+  const idSet = new Set(todoIds);
+  return res.rows.filter((r) => idSet.has(r.todo_id));
 }
 
 export async function markCompletedOn(params: { id: string; userEmail: string; dateYYYYMMDD: string }) {

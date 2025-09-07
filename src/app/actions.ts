@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import {
   deleteTodo as dbDeleteTodo,
   getAllTodos,
-  getCompletionsForTodo,
+  getCompletionsForTodos,
   insertTodo,
   markCompletedOn,
   unmarkCompletedOn,
@@ -76,36 +76,28 @@ export async function getTodaySummaries(): Promise<{
   const todayDate = new Date();
   const todayStr = toYYYYMMDD(todayDate);
   const todos = await getAllTodos({ userEmail });
-  // Which are completed today?
-  const completedTodaySet = new Set<string>();
-  await Promise.all(
-    todos.map(async (t) => {
-      const comps = await getCompletionsForTodo({ id: t.id, userEmail });
-      if (comps.some((c) => c.completed_on === todayStr)) {
-        completedTodaySet.add(t.id);
-      }
-    })
-  );
-
-  // Which one-time are already completed ever?
-  const completedEverSet = new Set<string>();
-  await Promise.all(
-    todos
-      .filter((t) => t.recurrence === "none")
-      .map(async (t) => {
-        const comps = await getCompletionsForTodo({ id: t.id, userEmail });
-        if (comps.length > 0) completedEverSet.add(t.id);
-      })
-  );
+  const allCompletions = await getCompletionsForTodos({
+    todoIds: todos.map((t) => t.id),
+    userEmail,
+  });
+  const byTodo = new Map<string, { today: boolean; ever: boolean }>();
+  for (const t of todos) byTodo.set(t.id, { today: false, ever: false });
+  for (const c of allCompletions) {
+    const rec = byTodo.get(c.todo_id);
+    if (!rec) continue;
+    rec.ever = true;
+    if (c.completed_on === todayStr) rec.today = true;
+  }
 
   const due: TodoRecord[] = [];
   const completed: TodoRecord[] = [];
   for (const t of todos) {
-    if (completedTodaySet.has(t.id)) {
+    const rec = byTodo.get(t.id)!;
+    if (rec.today) {
       completed.push(t);
       continue;
     }
-    const dueFlag = t.recurrence === "none" ? !completedEverSet.has(t.id) : isDueOnDate(t, todayDate);
+    const dueFlag = t.recurrence === "none" ? !rec.ever : isDueOnDate(t, todayDate);
     if (dueFlag) due.push(t);
   }
   return { due, completed };

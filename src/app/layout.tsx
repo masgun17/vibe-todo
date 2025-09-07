@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import Nav from "@/components/Nav";
 import "./globals.css";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -34,11 +35,9 @@ export default async function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <header className="border-b border-black/10 dark:border-white/10">
-          <nav className="mx-auto max-w-4xl h-14 flex items-center gap-4 px-4">
-            <Link href="/" className="font-semibold">Today</Link>
-            <Link href="/log" className="text-sm">Log</Link>
-            <Link href="/calendar" className="text-sm">Calendar</Link>
-            <div className="ml-auto">
+          <div className="flex items-center">
+            <Nav />
+            <div className="ml-auto mr-4">
               {!session ? (
                 <form action="/api/auth/signin" method="post">
                   <button className="text-sm underline">Sign in</button>
@@ -49,7 +48,7 @@ export default async function RootLayout({
                 </form>
               )}
             </div>
-          </nav>
+          </div>
         </header>
         <main className="mx-auto max-w-4xl px-4 py-6">{children}</main>
       </body>
